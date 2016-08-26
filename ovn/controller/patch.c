@@ -96,6 +96,7 @@ create_patch_port(struct controller_ctx *ctx,
     ovsrec_bridge_set_ports(src, ports, src->n_ports + 1);
 
     free(ports);
+    force_full_process();
 }
 
 static void
@@ -124,6 +125,7 @@ remove_port(struct controller_ctx *ctx,
             ovsrec_bridge_set_ports(bridge, new_ports, bridge->n_ports - 1);
             free(new_ports);
             ovsrec_port_delete(port);
+            force_full_process();
             return;
         }
     }
@@ -243,6 +245,12 @@ add_bridge_mappings(struct controller_ctx *ctx,
                           br_int, name1, br_ln, name2, existing_ports);
         create_patch_port(ctx, patch_port_id, binding->logical_port,
                           br_ln, name2, br_int, name1, existing_ports);
+        /* TODO (regXboi): this next line is needed for the 3 HVs, 3 LS,
+         * 3 lports/LS, 1 LR test case, but has the potential side effect
+         * of defeating quiet mode once a logical router leads to creating
+         * patch ports. Need to understand the failure mode better and
+         * what is needed to remove this. */
+        force_full_process();
         free(name1);
         free(name2);
     }
@@ -270,6 +278,7 @@ add_patched_datapath(struct hmap *patched_datapaths,
     /* stale is set to false. */
     hmap_insert(patched_datapaths, &pd->hmap_node,
                 binding_rec->datapath->tunnel_key);
+    force_full_process();
 }
 
 static void
@@ -296,6 +305,7 @@ add_logical_patch_ports_postprocess(struct hmap *patched_datapaths)
             hmap_remove(patched_datapaths, &pd_cur_node->hmap_node);
             free(pd_cur_node->key);
             free(pd_cur_node);
+            force_full_process();
         }
     }
 }
@@ -368,6 +378,7 @@ add_logical_patch_ports(struct controller_ctx *ctx,
             if (local_port) {
                 if (binding->chassis != chassis_rec && ctx->ovnsb_idl_txn) {
                     sbrec_port_binding_set_chassis(binding, chassis_rec);
+                    force_full_process();
                 }
             }
         }
