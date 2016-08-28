@@ -412,25 +412,20 @@ encaps_run(struct controller_ctx *ctx, const struct ovsrec_bridge *br_int,
     /* Maintain a mapping backwards from encap entries to their parent
      * chassis. Most changes happen at the encap row entry but tunnels need
      * to be established on the basis of the overall chassis. */
-    SBREC_CHASSIS_FOR_EACH_TRACKED (chassis_rec, ctx->ovnsb_idl) {
-        /* Defer deletion of mapping until we have cleaned up associated
-         * ports. */
-        if (!sbrec_chassis_is_deleted(chassis_rec)) {
-            for (int i = 0; i < chassis_rec->n_encaps; i++) {
-                encap_rec = chassis_rec->encaps[i];
+    SBREC_CHASSIS_FOR_EACH (chassis_rec, ctx->ovnsb_idl) {
+        for (int i = 0; i < chassis_rec->n_encaps; i++) {
+            encap_rec = chassis_rec->encaps[i];
 
-                struct encap_hash_node *encap_hash_node;
-                encap_hash_node = lookup_encap_uuid(&encap_rec->header_.uuid);
-                if (encap_hash_node) {
-                    /* A change might have invalidated our mapping. Process the
-                     * new version and then iterate over everything to see if it
-                     * is OK. */
-                    delete_encap_uuid(encap_hash_node);
-                    poll_immediate_wake();
-                }
-
-                insert_encap_uuid(&encap_rec->header_.uuid, chassis_rec);
+            struct encap_hash_node *encap_hash_node;
+            encap_hash_node = lookup_encap_uuid(&encap_rec->header_.uuid);
+            if (encap_hash_node) {
+                /* A change might have invalidated our mapping. Process the
+                 * new version and then iterate over everything to see if it
+                 * is OK. */
+                delete_encap_uuid(encap_hash_node);
             }
+
+            insert_encap_uuid(&encap_rec->header_.uuid, chassis_rec);
         }
     }
 
@@ -440,7 +435,7 @@ encaps_run(struct controller_ctx *ctx, const struct ovsrec_bridge *br_int,
      * might actually result in the creation of a different type tunnel if
      * that type is preferred. That's OK - when we process the other encap
      * rows, we'll just skip over the new tunnels. */
-    SBREC_ENCAP_FOR_EACH_TRACKED (encap_rec, ctx->ovnsb_idl) {
+    SBREC_ENCAP_FOR_EACH (encap_rec, ctx->ovnsb_idl) {
         struct encap_hash_node *encap_hash_node;
         struct chassis_hash_node *chassis_hash_node;
         const struct ovsrec_port *port_rec = NULL;
